@@ -24,18 +24,10 @@ class CelebA(object):
         self.image_size = 64
 
     # load celebA dataset
-    def load_celebA(self , is_test=False):
-
-        if is_test == False:
-
-            image_path = '/home/jichao/data/celebA/'
-        else:
-
-            image_path = '/home/jichao/data/celeba_test'
+    def load_celebA(self , image_path):
 
         # get the list of image path
         images_list = read_image_list(image_path)
-
         # get the data array of image
         return images_list
 
@@ -53,7 +45,6 @@ class CelebA(object):
 
         if batch_num >= maxiter_num - 1:
 
-            print "shuffe one time"
             length = len(input_list)
             perm = np.arange(length)
             np.random.shuffle(perm)
@@ -74,7 +65,6 @@ def transform(image, npx = 64 , is_crop=False, resize_w = 64):
         cropped_image = image
         cropped_image = scipy.misc.imresize(cropped_image ,
                             [resize_w , resize_w])
-
     return np.array(cropped_image)/127.5 - 1
 
 def center_crop(x, crop_h , crop_w=None, resize_w=64):
@@ -86,7 +76,6 @@ def center_crop(x, crop_h , crop_w=None, resize_w=64):
     i = int(round((w - crop_w)/2.))
     # return scipy.misc.imresize(x[40:218-30, 15:178-15],
     #                            [resize_w, resize_w])
-
     return scipy.misc.imresize(x[j:j + crop_h, i:i + crop_w],
                                [resize_w, resize_w])
 
@@ -117,51 +106,6 @@ def merge(images, size):
 
 def inverse_transform(image):
     return (image + 1.) / 2.
-
-def read_image_list_file(category, is_test):
-
-    path = ''
-    skip_num = 0
-    if is_test == False:
-
-        skip_num = 1202
-        path = "/home/jichao/data/celebA/"
-
-    else:
-
-        skip_num = 2
-        path = "/home/jichao/data/celeba_test/"
-
-    list_image = []
-    list_label = []
-    lines = open(category+"list_attr_celeba.txt")
-
-    li_num = 0
-
-    for line in lines:
-
-        if li_num < skip_num:
-
-            li_num += 1
-
-            continue
-
-        flag = line.split('1 ', 41)[20]
-        file_name = line.split(' ', 1)[0]
-
-        #add the image
-        list_image.append(path + file_name)
-
-        # print flag
-        if flag == ' ':
-            #one-hot
-            list_label.append([1,0])
-        else:
-            list_label.append([0,1])
-
-        li_num += 1
-
-    return list_image, list_label
 
 def read_image_list(category):
 

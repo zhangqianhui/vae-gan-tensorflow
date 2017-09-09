@@ -3,6 +3,7 @@ from ops import batch_normal, de_conv, conv2d, fully_connect, lrelu
 from utils import save_images
 from utils import CelebA
 import numpy as np
+import cv2
 
 TINY = 1e-8
 
@@ -174,6 +175,33 @@ class vaegan(object):
                 batch_num = 0
             save_path = self.saver.save(sess , self.saved_model_path)
             print "Model saved in file: %s" % save_path
+
+    def test(self):
+
+        init = tf.global_variables_initializer()
+        config = tf.ConfigProto()
+        config.gpu_options.allow_growth = True
+
+        with tf.Session(config=config) as sess:
+
+            sess.run(init)
+            self.saver.restore(sess, self.saved_model_path)
+            max_iter = len(self.ds_train) / self.batch_size - 1
+
+            train_list = CelebA.getNextBatch(self.ds_train, max_iter, 0, self.batch_size)
+            realbatch_array = CelebA.getShapeForData(train_list)
+
+            real_images, sample_images = sess.run([self.images, self.x_tilde], feed_dict={self.images: realbatch_array})
+            save_images(sample_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0))
+            save_images(real_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0))
+
+            ri = cv2.imread('{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0), 1)
+            fi = cv2.imread('{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0), 1)
+
+            cv2.imshow('real_image', ri)
+            cv2.imshow('reconstruction', fi)
+
+            cv2.waitKey(-1)
 
     def discriminate(self, x_var, reuse=False):
 
