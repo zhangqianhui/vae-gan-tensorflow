@@ -10,7 +10,7 @@ flags.DEFINE_integer("batch_size" , 64, "batch size")
 flags.DEFINE_integer("max_epoch" , 60, "the maxmization epoch")
 flags.DEFINE_integer("latent_dim" , 128, "the dim of latent code")
 flags.DEFINE_integer("learn_rate_init" , 0.0003, "the init of learn rate")
-flags.DEFINE_string("path" , '/home/jichao/data/celebA', "tthe dataset directory")
+flags.DEFINE_string("path" , '', "tthe dataset directory")
 flags.DEFINE_integer("operation", 0, "the init of learn rate")
 
 
