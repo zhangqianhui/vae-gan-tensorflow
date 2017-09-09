@@ -26,11 +26,11 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
 
 ##Experiments visual result
 
- Sampling
+ Input:
     
  ![](img/real.png)
     
- Reconstruction(Different cropping size.)
+ Reconstruction
     
  ![](img/recon.png)
     
