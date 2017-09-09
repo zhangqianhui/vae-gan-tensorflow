@@ -26,13 +26,13 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
 
 ##Experiments visual result
 
-    Sampling
+ Sampling
     
-    ![](images/real.png)
+ ![](images/real.png)
     
-    Reconstruction(Different cropping size.)
+ Reconstruction(Different cropping size.)
     
-    ![](images/recon.png)
+ ![](images/recon.png)
     
     
  ##Issue
@@ -42,4 +42,5 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
 ## Reference code
 
 [DCGAN](https://github.com/carpedm20/DCGAN-tensorflow)
+
 [autoencoding_beyond_pixels](https://github.com/andersbll/autoencoding_beyond_pixels)
