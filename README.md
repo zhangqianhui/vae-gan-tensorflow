@@ -28,11 +28,11 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
 
  Sampling
     
- ![](images/real.png)
+ ![](img/real.png)
     
  Reconstruction(Different cropping size.)
     
- ![](images/recon.png)
+ ![](img/recon.png)
     
     
  ##Issue
