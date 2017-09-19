@@ -24,7 +24,7 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
   
     $ python main.py --operation 1 --path your data path
 
-##Experiments visual result
+## Experiments visual result
 
  Input:
     
@@ -35,7 +35,7 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
  ![](img/recon.png)
     
     
- ##Issue
+ ## Issue
  If you find the bug and problem, Thanks for your issue to propose it.
     
 
