@@ -25,11 +25,11 @@ and unzip CelebA into a directory. Noted that this directory don't contain the s
   
    Train:
     
-    $ python main.py --operation 0 --path your data path
+    $ python main.py --op 0 --path your data path
   
   Test:
   
-    $ python main.py --operation 1 --path your data path
+    $ python main.py --op 1 --path your data path
 
 ## Experiments visual result
 
