@@ -4,18 +4,21 @@ from utils import save_images
 from utils import CelebA
 import numpy as np
 import cv2
+from tensorflow.python.framework.ops import convert_to_tensor
 
 TINY = 1e-8
+d_scale_factor = 0.25
+g_scale_factor =  1- 0.75/2
 
 class vaegan(object):
 
     #build model
-    def __init__(self, batch_size, max_epoch, model_path, data, latent_dim, sample_path, log_dir, learnrate_init):
+    def __init__(self, batch_size, max_iters, model_path, data_ob, latent_dim, sample_path, log_dir, learnrate_init):
 
         self.batch_size = batch_size
-        self.max_epoch = max_epoch
+        self.max_iters = max_iters
         self.saved_model_path = model_path
-        self.ds_train = data
+        self.data_ob = data_ob
         self.latent_dim = latent_dim
         self.sample_path = sample_path
         self.log_dir = log_dir
@@ -23,54 +26,57 @@ class vaegan(object):
         self.log_vars = []
 
         self.channel = 3
-        self.output_size = CelebA().image_size
+        self.output_size = data_ob.image_size
         self.images = tf.placeholder(tf.float32, [self.batch_size, self.output_size, self.output_size, self.channel])
-
-        self.z_p = tf.placeholder(tf.float32, [self.batch_size , self.latent_dim])
         self.ep = tf.random_normal(shape=[self.batch_size, self.latent_dim])
+        self.zp = tf.random_normal(shape=[self.batch_size, self.latent_dim])
+        #self.noise = tf.random_normal(shape=self.images.shape)
+
+        self.dataset = tf.data.Dataset.from_tensor_slices(convert_to_tensor(self.data_ob.train_data_list, dtype=tf.string))
+        self.dataset = self.dataset.map(self._parse_function)
+        self.dataset = self.dataset.repeat(100)
+        self.dataset = self.dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
+        self.iterator = tf.data.Iterator.from_structure(self.dataset.output_types, self.dataset.output_shapes)
+        self.next_x = self.iterator.get_next()
+        self.training_init_op = self.iterator.make_initializer(self.dataset)
 
     def build_model_vaegan(self):
 
-        #encode
         self.z_mean, self.z_sigm = self.Encode(self.images)
         self.z_x = tf.add(self.z_mean, tf.sqrt(tf.exp(self.z_sigm))*self.ep)
-
         self.x_tilde = self.generate(self.z_x, reuse=False)
-        #the feature
+
         self.l_x_tilde, self.De_pro_tilde = self.discriminate(self.x_tilde)
 
-        #for Gan generator
-        self.x_p = self.generate(self.z_p, reuse=True)
-        # the loss of dis network
+        self.x_p = self.generate(self.zp, reuse=True)
+
         self.l_x,  self.D_pro_logits = self.discriminate(self.images, True)
         _, self.G_pro_logits = self.discriminate(self.x_p, True)
-        # the defination of loss
 
         #KL loss
         self.kl_loss = self.KL_loss(self.z_mean, self.z_sigm)
 
-        #optimize D
+        # D loss
         self.D_fake_loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(self.G_pro_logits), logits=self.G_pro_logits))
         self.D_real_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.D_pro_logits), logits=self.D_pro_logits))
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.D_pro_logits) - d_scale_factor, logits=self.D_pro_logits))
         self.D_tilde_loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.zeros_like(self.De_pro_tilde), logits=self.De_pro_tilde))
 
-        #Optimize G
+        # G loss
         self.G_fake_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.G_pro_logits), logits=self.G_pro_logits))
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.G_pro_logits) - g_scale_factor, logits=self.G_pro_logits))
         self.G_tilde_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.De_pro_tilde), logits=self.De_pro_tilde))
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.ones_like(self.De_pro_tilde) - g_scale_factor, logits=self.De_pro_tilde))
 
-        #for Dis
         self.D_loss = self.D_fake_loss + self.D_real_loss + self.D_tilde_loss
 
         # preceptual loss(feature loss)
         self.LL_loss = tf.reduce_mean(self.NLLNormal(self.l_x_tilde, self.l_x))
 
         #For encode
-        self.encode_loss = self.kl_loss/(128*64) - self.LL_loss
+        self.encode_loss = self.kl_loss/(self.latent_dim*self.batch_size) - self.LL_loss
 
         #for Gen
         self.G_loss = self.G_fake_loss + self.G_tilde_loss - 1e-6*self.LL_loss
@@ -95,26 +101,22 @@ class vaegan(object):
 
         global_step = tf.Variable(0, trainable=False)
         add_global = global_step.assign_add(1)
-        new_learning_rate = tf.train.exponential_decay(self.learn_rate_init, global_step=global_step, decay_steps=20000,
+        new_learning_rate = tf.train.exponential_decay(self.learn_rate_init, global_step=global_step, decay_steps=10000,
                                                    decay_rate=0.98)
         #for D
         trainer_D = tf.train.RMSPropOptimizer(learning_rate=new_learning_rate)
         gradients_D = trainer_D.compute_gradients(self.D_loss, var_list=self.d_vars)
-        clipped_gradients_D = [(tf.clip_by_value(grad, -1.0, 1.0), var) for grad, var in gradients_D]
-        opti_D = trainer_D.apply_gradients(clipped_gradients_D)
+        opti_D = trainer_D.apply_gradients(gradients_D)
 
         #for G
-
         trainer_G = tf.train.RMSPropOptimizer(learning_rate=new_learning_rate)
         gradients_G = trainer_G.compute_gradients(self.G_loss, var_list=self.g_vars)
-        clipped_gradients_G = [(tf.clip_by_value(_[0], -1, 1.), _[1]) for _ in gradients_G]
-        opti_G = trainer_G.apply_gradients(clipped_gradients_G)
+        opti_G = trainer_G.apply_gradients(gradients_G)
 
         #for E
         trainer_E = tf.train.RMSPropOptimizer(learning_rate=new_learning_rate)
         gradients_E = trainer_E.compute_gradients(self.encode_loss, var_list=self.e_vars)
-        clipped_gradients_E = [(tf.clip_by_value(_[0], -1, 1.), _[1]) for _ in gradients_E]
-        opti_E = trainer_E.apply_gradients(clipped_gradients_E)
+        opti_E = trainer_E.apply_gradients(gradients_E)
 
         init = tf.global_variables_initializer()
         config = tf.ConfigProto()
@@ -123,56 +125,56 @@ class vaegan(object):
         with tf.Session(config=config) as sess:
 
             sess.run(init)
+
+            # Initialzie the iterator
+            sess.run(self.training_init_op)
             summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(self.log_dir, sess.graph)
-            #self.saver.restore(sess, self.saved_model_path)
-            batch_num = 0
-            e = 0
+
+            self.saver.restore(sess, self.saved_model_path)
+
             step = 0
 
-            while e <= self.max_epoch:
+            while step <= self.max_iters:
 
-                max_iter = len(self.ds_train)/self.batch_size - 1
-                while batch_num < len(self.ds_train)/self.batch_size:
+                next_x_images = sess.run(self.next_x)
 
-                    step = step + 1
-                    train_list = CelebA.getNextBatch(self.ds_train, max_iter , batch_num, self.batch_size)
-                    realbatch_array = CelebA.getShapeForData(train_list)
-                    sample_z = np.random.normal(size=[self.batch_size, self.latent_dim])
+                fd ={self.images: next_x_images}
 
-                    sess.run(opti_E, feed_dict={self.images: realbatch_array})
-                    #optimizaiton G
-                    sess.run(opti_G, feed_dict={self.images: realbatch_array, self.z_p: sample_z})
-                    # optimization D
-                    sess.run(opti_D, feed_dict={self.images: realbatch_array, self.z_p: sample_z})
+                sess.run(opti_E, feed_dict=fd)
+                # optimizaiton G
+                sess.run(opti_G, feed_dict=fd)
+                # optimization D
+                sess.run(opti_D, feed_dict=fd)
 
-                    summary_str = sess.run(summary_op, feed_dict = {self.images:realbatch_array, self.z_p: sample_z})
-                    summary_writer.add_summary(summary_str , step)
+                summary_str = sess.run(summary_op, feed_dict=fd)
 
-                    batch_num += 1
+                summary_writer.add_summary(summary_str, step)
+                new_learn_rate = sess.run(new_learning_rate)
 
-                    new_learn_rate = sess.run(new_learning_rate)
-                    if new_learn_rate > 0.00005:
-                        sess.run(add_global)
+                if new_learn_rate > 0.00005:
 
-                    if step%20 == 0:
+                    sess.run(add_global)
 
-                        D_loss, fake_loss, encode_loss, LL_loss, kl_loss = sess.run([self.D_loss, self.G_loss, self.encode_loss, self.LL_loss, self.kl_loss/(128*64)], feed_dict={self.images: realbatch_array, self.z_p: sample_z})
-                        print("EPOCH %d step %d: D: loss = %.7f G: loss=%.7f Encode: loss=%.7f LL loss=%.7f KL=%.7f" % (e, step, D_loss, fake_loss, encode_loss, LL_loss, kl_loss))
+                if step%200 == 0:
 
-                    if np.mod(step , 200) == 1:
+                    D_loss, fake_loss, encode_loss, LL_loss, kl_loss, new_learn_rate \
+                        = sess.run([self.D_loss, self.G_loss, self.encode_loss, self.LL_loss, self.kl_loss/(128*64), new_learning_rate], feed_dict=fd)
+                    print("Step %d: D: loss = %.7f G: loss=%.7f E: loss=%.7f LL loss=%.7f KL=%.7f, LR=%.7f" % (step, D_loss, fake_loss, encode_loss, LL_loss, kl_loss, new_learn_rate))
 
-                        save_images(realbatch_array[0:100], [10, 10],
-                                    '{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, e, step))
+                if np.mod(step , 200) == 1:
 
-                    if np.mod(step , 200) == 1:
+                    save_images(next_x_images[0:64], [8, 8],
+                                '{}/train_{:02d}_real.png'.format(self.sample_path, step))
+                    sample_images = sess.run(self.x_tilde, feed_dict=fd)
+                    save_images(sample_images[0:64] , [8 , 8], '{}/train_{:02d}_recon.png'.format(self.sample_path, step))
 
-                        sample_images = sess.run(self.x_tilde, feed_dict={self.images: realbatch_array})
-                        save_images(sample_images[0:100] , [10 , 10], '{}/train_{:02d}_{:04d}.png'.format(self.sample_path, e, step))
-                        self.saver.save(sess , self.saved_model_path)
+                if np.mod(step , 2000) == 1 and step != 0:
 
-                e += 1
-                batch_num = 0
+                    self.saver.save(sess , self.saved_model_path)
+
+                step += 1
+
             save_path = self.saver.save(sess , self.saved_model_path)
             print "Model saved in file: %s" % save_path
 
@@ -184,14 +186,15 @@ class vaegan(object):
 
         with tf.Session(config=config) as sess:
 
+            # Initialzie the iterator
+            sess.run(self.training_init_op)
+
             sess.run(init)
             self.saver.restore(sess, self.saved_model_path)
-            max_iter = len(self.ds_train) / self.batch_size - 1
 
-            train_list = CelebA.getNextBatch(self.ds_train, max_iter, 0, self.batch_size)
-            realbatch_array = CelebA.getShapeForData(train_list)
+            next_x_images = sess.run(self.next_x)
 
-            real_images, sample_images = sess.run([self.images, self.x_tilde], feed_dict={self.images: realbatch_array})
+            real_images, sample_images = sess.run([self.images, self.x_tilde], feed_dict={self.images: next_x_images})
             save_images(sample_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0))
             save_images(real_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0))
 
@@ -216,8 +219,9 @@ class vaegan(object):
             conv4 = conv2d(conv3, output_dim=256, name='dis_conv4')
             middle_conv = conv4
             conv4= tf.nn.relu(batch_normal(conv4, scope='dis_bn3', reuse=reuse))
-            conv4 = tf.reshape(conv4, [self.batch_size, -1])
-            fl = lrelu(batch_normal(fully_connect(conv4, output_size=512, scope='dis_fully1'), scope='dis_bn4', reuse=reuse))
+            conv4= tf.reshape(conv4, [self.batch_size, -1])
+
+            fl = tf.nn.relu(batch_normal(fully_connect(conv4, output_size=256, scope='dis_fully1'), scope='dis_bn4', reuse=reuse))
             output = fully_connect(fl , output_size=1, scope='dis_fully2')
 
             return middle_conv, output
@@ -268,6 +272,17 @@ class vaegan(object):
         tmp += c
 
         return tmp
+
+    def _parse_function(self, images_filenames):
+
+        image_string = tf.read_file(images_filenames)
+        image_decoded = tf.image.decode_and_crop_jpeg(image_string, crop_window=[218 / 2 - 54, 178 /2 - 54 , 108, 108], channels=3)
+        image_resized = tf.image.resize_images(image_decoded, [64, 64])
+        image_resized = image_resized / 127.5 - 1
+
+        return image_resized
+
+
 
 
 
