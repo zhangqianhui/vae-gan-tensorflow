@@ -10,7 +10,7 @@ flags.DEFINE_integer("batch_size" , 64, "batch size")
 flags.DEFINE_integer("max_iters" , 600000, "the maxmization epoch")
 flags.DEFINE_integer("latent_dim" , 128, "the dim of latent code")
 flags.DEFINE_integer("learn_rate_init" , 0.0001, "the init of learn rate")
-flags.DEFINE_string("path", 'You path', "for examle, '/home/jack/code/' is the directory of your celebA(Dataset's name must be celebA)")
+flags.DEFINE_string("path", 'You path', "for examle, '/home/jack/data/' is the directory of your celebA(Dataset's name must be celebA)")
 flags.DEFINE_integer("op", 1, "Training or Test")
 
 FLAGS = flags.FLAGS
