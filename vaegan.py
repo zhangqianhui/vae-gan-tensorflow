@@ -131,7 +131,7 @@ class vaegan(object):
             summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(self.log_dir, sess.graph)
 
-            self.saver.restore(sess, self.saved_model_path)
+            #self.saver.restore(sess, self.saved_model_path)
 
             step = 0
 
