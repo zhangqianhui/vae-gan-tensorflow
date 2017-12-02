@@ -1,6 +1,6 @@
 import tensorflow as tf
 from ops import batch_normal, de_conv, conv2d, fully_connect, lrelu
-from utils import save_images, get_image
+from utils import save_images
 from utils import CelebA
 import numpy as np
 import cv2
@@ -13,11 +13,10 @@ g_scale_factor =  1- 0.75/2
 class vaegan(object):
 
     #build model
-    def __init__(self, batch_size, max_iters, repeat, model_path, data_ob, latent_dim, sample_path, log_dir, learnrate_init):
+    def __init__(self, batch_size, max_iters, model_path, data_ob, latent_dim, sample_path, log_dir, learnrate_init):
 
         self.batch_size = batch_size
         self.max_iters = max_iters
-        self.repeat_num = repeat
         self.saved_model_path = model_path
         self.data_ob = data_ob
         self.latent_dim = latent_dim
@@ -31,16 +30,14 @@ class vaegan(object):
         self.images = tf.placeholder(tf.float32, [self.batch_size, self.output_size, self.output_size, self.channel])
         self.ep = tf.random_normal(shape=[self.batch_size, self.latent_dim])
         self.zp = tf.random_normal(shape=[self.batch_size, self.latent_dim])
+        #self.noise = tf.random_normal(shape=self.images.shape)
 
-        self.dataset = tf.data.Dataset.from_tensor_slices(
-            convert_to_tensor(self.data_ob.train_data_list, dtype=tf.string))
-        self.dataset = self.dataset.map(lambda filename : tuple(tf.py_func(self._read_by_function,
-                                                                            [filename], [tf.double])), num_parallel_calls=16)
+        self.dataset = tf.data.Dataset.from_tensor_slices(convert_to_tensor(self.data_ob.train_data_list, dtype=tf.string))
+        self.dataset = self.dataset.map(self._parse_function)
         self.dataset = self.dataset.repeat(100)
         self.dataset = self.dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
-
         self.iterator = tf.data.Iterator.from_structure(self.dataset.output_types, self.dataset.output_shapes)
-        self.next_x = tf.squeeze(self.iterator.get_next())
+        self.next_x = self.iterator.get_next()
         self.training_init_op = self.iterator.make_initializer(self.dataset)
 
     def build_model_vaegan(self):
@@ -48,6 +45,7 @@ class vaegan(object):
         self.z_mean, self.z_sigm = self.Encode(self.images)
         self.z_x = tf.add(self.z_mean, tf.sqrt(tf.exp(self.z_sigm))*self.ep)
         self.x_tilde = self.generate(self.z_x, reuse=False)
+
         self.l_x_tilde, self.De_pro_tilde = self.discriminate(self.x_tilde)
 
         self.x_p = self.generate(self.zp, reuse=True)
@@ -133,7 +131,8 @@ class vaegan(object):
             summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(self.log_dir, sess.graph)
 
-            #self.saver.restore(sess, self.saved_model_path)
+            self.saver.restore(sess, self.saved_model_path)
+
             step = 0
 
             while step <= self.max_iters:
@@ -141,6 +140,7 @@ class vaegan(object):
                 next_x_images = sess.run(self.next_x)
 
                 fd ={self.images: next_x_images}
+
                 sess.run(opti_E, feed_dict=fd)
                 # optimizaiton G
                 sess.run(opti_G, feed_dict=fd)
@@ -153,6 +153,7 @@ class vaegan(object):
                 new_learn_rate = sess.run(new_learning_rate)
 
                 if new_learn_rate > 0.00005:
+
                     sess.run(add_global)
 
                 if step%200 == 0:
@@ -275,18 +276,11 @@ class vaegan(object):
     def _parse_function(self, images_filenames):
 
         image_string = tf.read_file(images_filenames)
-        image_decoded = tf.image.decode_and_crop_jpeg(image_string, crop_window=[218 / 2 - 54, 178 / 2 - 54 , 108, 108], channels=3)
-        image_resized = tf.image.resize_images(image_decoded, [self.output_size, self.output_size])
+        image_decoded = tf.image.decode_and_crop_jpeg(image_string, crop_window=[218 / 2 - 54, 178 /2 - 54 , 108, 108], channels=3)
+        image_resized = tf.image.resize_images(image_decoded, [64, 64])
         image_resized = image_resized / 127.5 - 1
 
         return image_resized
-
-    def _read_by_function(self, filename):
-
-        array = get_image(filename, 108, is_crop=True, resize_w=self.output_size,
-                           is_grayscale=False)
-        real_images = np.array(array)
-        return real_images
 
 
 
