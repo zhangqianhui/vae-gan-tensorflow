@@ -5,13 +5,13 @@ The paper should be the first one to combine the Variational Autoencoder(VAE) an
 using the discrimiator of GAN as the perceptual loss instead of the pixel-wise loss in the original VAE. VAE/GAN also can be used for image 
 reconstruction and visual attribution manipulation.
 
-# About training instability
+## About training instability
 
 I also found the training is very instability. So, I update the code to stablize the adversarial progress of VAE/GAN. The details is in the below.
 
 - Add a trick, named label smoothing[Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) 
 
-# Pretraining models.
+## Pretraining models.
 
 The checkpoints files can be downloads from [Google Driver](https://drive.google.com/open?id=1SsaDr6Gaq58rV1H8YUBHiF2-zHPdBN8v) 
 Plearn unzip the files at the project directory. Later, I will update the new models after more training iterations.
