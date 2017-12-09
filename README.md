@@ -10,7 +10,11 @@ reconstruction and visual attribution manipulation.
 I also found the training is very instability. So, I update the code to stablize the adversarial progress of VAE/GAN. The details is in the below.
 
 - Add a trick, named label smoothing[Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) 
-- Adjust the learning rate from 0.0003 to 0.0001. 
+
+# Pretraining models.
+
+The checkpoints files can be downloads from [Google Driver](https://drive.google.com/open?id=1SsaDr6Gaq58rV1H8YUBHiF2-zHPdBN8v) 
+Plearn unzip the files at the project directory. Later, I will update the new models after more training iterations.
 
 ## Prerequisites
 
