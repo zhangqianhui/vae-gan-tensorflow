@@ -12,18 +12,18 @@ flags.DEFINE_integer("latent_dim" , 128, "the dim of latent code")
 flags.DEFINE_integer("learn_rate_init" , 0.0003, "the init of learn rate")
 #Please set this num of repeat by the size of your datasets.
 flags.DEFINE_integer("repeat", 10000, "the numbers of repeat for your datasets")
-flags.DEFINE_string("path", '/home/wangbin/data/', "for example, '/home/jack/data/' is the directory of your celebA data")
-flags.DEFINE_integer("op", 1, "Training or Test")
+flags.DEFINE_string("path", '/home/?/data/', "for example, '/home/jack/data/' is the directory of your celebA data")
+flags.DEFINE_integer("op", 0, "Training or Test")
 
 FLAGS = flags.FLAGS
 if __name__ == "__main__":
 
     root_log_dir = "./vaeganlogs/logs/celeba_test"
     vaegan_checkpoint_dir = "./model_vaegan/model.ckpt"
-    sample_path = "./vaeganSample/sample22"
+    sample_path = "./vaeganSample/sample"
 
     mkdir_p(root_log_dir)
-    mkdir_p(vaegan_checkpoint_dir)
+    mkdir_p('./model_vaegan/')
     mkdir_p(sample_path)
 
     model_path = vaegan_checkpoint_dir

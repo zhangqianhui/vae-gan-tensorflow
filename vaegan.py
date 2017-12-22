@@ -37,7 +37,7 @@ class vaegan(object):
             convert_to_tensor(self.data_ob.train_data_list, dtype=tf.string))
         self.dataset = self.dataset.map(lambda filename : tuple(tf.py_func(self._read_by_function,
                                                                             [filename], [tf.double])), num_parallel_calls=16)
-        self.dataset = self.dataset.repeat(10000)
+        self.dataset = self.dataset.repeat(self.repeat_num)
         self.dataset = self.dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
         self.iterator = tf.data.Iterator.from_structure(self.dataset.output_types, self.dataset.output_shapes)
@@ -159,15 +159,15 @@ class vaegan(object):
                 if step%200 == 0:
 
                     D_loss, fake_loss, encode_loss, LL_loss, kl_loss, new_learn_rate \
-                        = sess.run([self.D_loss, self.G_loss, self.encode_loss, self.LL_loss, self.kl_loss/(128*64), new_learning_rate], feed_dict=fd)
+                        = sess.run([self.D_loss, self.G_loss, self.encode_loss, self.LL_loss, self.kl_loss/(self.latent_dim*self.batch_size), new_learning_rate], feed_dict=fd)
                     print("Step %d: D: loss = %.7f G: loss=%.7f E: loss=%.7f LL loss=%.7f KL=%.7f, LR=%.7f" % (step, D_loss, fake_loss, encode_loss, LL_loss, kl_loss, new_learn_rate))
 
                 if np.mod(step , 200) == 1:
 
-                    save_images(next_x_images[0:64], [8, 8],
+                    save_images(next_x_images[0:self.batch_size], [self.batch_size/8, 8],
                                 '{}/train_{:02d}_real.png'.format(self.sample_path, step))
                     sample_images = sess.run(self.x_tilde, feed_dict=fd)
-                    save_images(sample_images[0:64] , [8 , 8], '{}/train_{:02d}_recon.png'.format(self.sample_path, step))
+                    save_images(sample_images[0:self.batch_size] , [self.batch_size/8, 8], '{}/train_{:02d}_recon.png'.format(self.sample_path, step))
 
                 if np.mod(step , 2000) == 1 and step != 0:
 
@@ -195,8 +195,8 @@ class vaegan(object):
             next_x_images = sess.run(self.next_x)
 
             real_images, sample_images = sess.run([self.images, self.x_tilde], feed_dict={self.images: next_x_images})
-            save_images(sample_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0))
-            save_images(real_images[0:64], [8, 8], '{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0))
+            save_images(sample_images[0:self.batch_size], [self.batch_size/8, 8], '{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0))
+            save_images(real_images[0:self.batch_size], [self.batch_size/8, 8], '{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0))
 
             ri = cv2.imread('{}/train_{:02d}_{:04d}_r.png'.format(self.sample_path, 0, 0), 1)
             fi = cv2.imread('{}/train_{:02d}_{:04d}_con.png'.format(self.sample_path, 0, 0), 1)
