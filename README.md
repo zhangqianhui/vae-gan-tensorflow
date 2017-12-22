@@ -13,7 +13,7 @@ I also found the training is very instability. So, I update the code to stablize
 
 ## Pretraining models.
 
-The checkpoints files can be downloads from  [Google Driver](https://drive.google.com/open?id=1FaVbIeOzfNW7yCa2eRljcZAemljK3oZ-) 
+The checkpoints files can be downloads from  [Google Driver](https://drive.google.com/open?id=1E5FWN6Xqg65bmXT5mtY8nmuLREz4gLoZ) 
 Plearn unzip the files at the project directory. Later, I will update the new models after more training iterations.
 
 ## Prerequisites
