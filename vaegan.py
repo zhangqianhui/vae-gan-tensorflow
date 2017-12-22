@@ -3,12 +3,13 @@ from ops import batch_normal, de_conv, conv2d, fully_connect, lrelu
 from utils import save_images, get_image
 from utils import CelebA
 import numpy as np
-import cv2
+import cv2 
 from tensorflow.python.framework.ops import convert_to_tensor
-
+import os
 TINY = 1e-8
 d_scale_factor = 0.25
-g_scale_factor =  1- 0.75/2
+g_scale_factor =  1 - 0.75/2
+
 
 class vaegan(object):
 
@@ -36,7 +37,7 @@ class vaegan(object):
             convert_to_tensor(self.data_ob.train_data_list, dtype=tf.string))
         self.dataset = self.dataset.map(lambda filename : tuple(tf.py_func(self._read_by_function,
                                                                             [filename], [tf.double])), num_parallel_calls=16)
-        self.dataset = self.dataset.repeat(100)
+        self.dataset = self.dataset.repeat(10000)
         self.dataset = self.dataset.apply(tf.contrib.data.batch_and_drop_remainder(batch_size))
 
         self.iterator = tf.data.Iterator.from_structure(self.dataset.output_types, self.dataset.output_shapes)
@@ -75,10 +76,10 @@ class vaegan(object):
         self.D_loss = self.D_fake_loss + self.D_real_loss + self.D_tilde_loss
 
         # preceptual loss(feature loss)
-        self.LL_loss = tf.reduce_mean(self.NLLNormal(self.l_x_tilde, self.l_x))
+        self.LL_loss = tf.reduce_mean(tf.reduce_sum(self.NLLNormal(self.l_x_tilde, self.l_x), [1,2,3]))
 
         #For encode
-        self.encode_loss = self.kl_loss/(self.latent_dim*self.batch_size) - self.LL_loss
+        self.encode_loss = self.kl_loss/(self.latent_dim*self.batch_size) - self.LL_loss / (4 * 4 * 256)
 
         #for Gen
         self.G_loss = self.G_fake_loss + self.G_tilde_loss - 1e-6*self.LL_loss
