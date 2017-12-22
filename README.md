@@ -9,7 +9,7 @@ reconstruction and visual attribution manipulation.
 
 I also found the training is very instability. So, I update the code to stablize the adversarial progress of VAE/GAN. The details is in the below.
 
-- Add a trick, named label smoothing[Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) 
+- Add a trick, named label smoothing [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) 
 
 ## Pretraining models.
 
