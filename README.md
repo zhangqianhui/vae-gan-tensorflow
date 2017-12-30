@@ -11,10 +11,9 @@ I also found the training is very instability. So, I update the code to stablize
 
 - Add a trick, named label smoothing [Improved Techniques for Training GANs](https://arxiv.org/abs/1606.03498) 
 
-## Pretraining models.
+## Pretrained models.
 
-The checkpoints files can be downloads from  [Google Driver](https://drive.google.com/open?id=1E5FWN6Xqg65bmXT5mtY8nmuLREz4gLoZ) 
-Plearn unzip the files at the project directory. Later, I will update the new models after more training iterations.
+The checkpoints files can be downloads from  [Google Drive](https://drive.google.com/open?id=1E5FWN6Xqg65bmXT5mtY8nmuLREz4gLoZ). Please unzip the files inside the project directory. Later, I will update the new models after more training iterations.
 
 ## Prerequisites
 
