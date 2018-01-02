@@ -63,7 +63,7 @@ def merge(images, size):
     return img
 
 def inverse_transform(image):
-    return ((image + 1) * 127.5).astype('int32')
+    return ((image + 1) * 127.5).astype(tf.uint8)
 
 class CelebA(object):
     def __init__(self, images_path):
