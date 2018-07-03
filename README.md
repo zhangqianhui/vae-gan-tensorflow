@@ -21,7 +21,7 @@ The checkpoints files can be downloads from  [Google Drive](https://drive.google
 
 ## dataset requirement
 
-You can download the [CelebA dataset](https://www.dropbox.com/sh/8oqt9vytwxb3s4r/AAB06FXaQRUNtjW9ntaoPGvCa?dl=0) 
+You can download the [Align and Cropped CelebA dataset](http://mmlab.ie.cuhk.edu.hk/projects/CelebA.html) 
 and unzip CelebA into a directory. Noted that this directory don't contain the sub-directory.
 
 ## Usage
